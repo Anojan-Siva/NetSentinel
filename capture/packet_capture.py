@@ -1,5 +1,6 @@
 from scapy.all import sniff, IP, TCP, UDP
 from analysis.port_scan_detector import PortScanDetector
+from analysis.syn_flood_detector import SynFloodDetector
 from collections import Counter
 import time
 
@@ -10,6 +11,7 @@ protocols = Counter()
 destination_ports = Counter()
 start_time = time.time()
 port_scan_detector = PortScanDetector(threshold=10)
+syn_flood_detector = SynFloodDetector(threshold=100)
 
 def process_packet(packet):
     global packet_count
@@ -27,6 +29,10 @@ def process_packet(packet):
         detected, unique_ports = port_scan_detector.analyze(source_ip, destination_ip, destination_port)
         if detected:
             print(f"\n PORT SCAN DETECTED: " f"{source_ip} -> {destination_ip} " f"({unique_ports} unique ports)")
+        if packet[TCP].flags == "S":
+            detected, syn_count = syn_flood_detector.analyze(source_ip)
+            if detected:
+                print(f"\n SYN FLOOD DETECTED: " f"{source_ip} -> {destination_ip} " f"({syn_count} SYN packets)")
     elif UDP in packet:
         protocols["UDP"] += 1
         destination_ports[packet[UDP].dport] += 1
